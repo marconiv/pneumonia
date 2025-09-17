@@ -1,18 +1,7 @@
-# Framework principal
 streamlit==1.38.0
-
-# TensorFlow Lite (vem junto no pacote principal do TensorFlow)
-tensorflow==2.17.0
-
-# Manipulação numérica
 numpy==1.26.4
-
-# Visualização e plots
 matplotlib==3.9.2
-
-# Pré-processamento e augmentação de imagens
 scikit-image==0.24.0
 opencv-python==4.10.0.84
-
-# Utilitários gerais
 pillow==10.4.0
+tflite-runtime==2.14.0
