@@ -13,12 +13,12 @@ def load_tflite_model():
     interpreter.allocate_tensors()
     return interpreter
 
-# Função para pré-processar imagem (sem TensorFlow)
+# Função para pré-processar imagem (em RGB, 3 canais)
 def preprocess_uploaded_image(uploaded_file):
-    img = Image.open(uploaded_file).convert("L")  # converte para grayscale
-    img = img.resize((180, 180))  # redimensiona
+    img = Image.open(uploaded_file).convert("RGB")  # garante 3 canais
+    img = img.resize((180, 180))  # redimensiona para o input do modelo
     img_array = np.array(img, dtype=np.float32) / 255.0
-    img_array = np.expand_dims(img_array, axis=(0, -1))  # shape: (1, 180, 180, 1)
+    img_array = np.expand_dims(img_array, axis=0)  # shape: (1, 180, 180, 3)
     return img_array, img
 
 # Função para fazer predição com TFLite
@@ -26,7 +26,7 @@ def predict_tflite(interpreter, img_array):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    # Ajusta dtype
+    # Ajusta dtype da entrada
     img_array = img_array.astype(input_details[0]["dtype"])
 
     # Passa os dados
@@ -35,7 +35,7 @@ def predict_tflite(interpreter, img_array):
     # Roda a inferência
     interpreter.invoke()
 
-    # Saída
+    # Obtém a saída
     output_data = interpreter.get_tensor(output_details[0]['index'])
     return output_data
 
@@ -50,15 +50,15 @@ interpreter = load_tflite_model()
 uploaded_file = st.file_uploader("Envie uma imagem (JPG/PNG)", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Pré-processa
+    # Pré-processa a imagem
     img_array, img_display = preprocess_uploaded_image(uploaded_file)
 
-    # Predição
+    # Faz a predição
     prediction = predict_tflite(interpreter, img_array)[0]  # vetor de saída
 
     # Assumindo saída binária [Normal, Pneumonia]
-    prob_normal = prediction[0]
-    prob_pneumonia = prediction[1]
+    prob_normal = float(prediction[0])
+    prob_pneumonia = float(prediction[1])
     label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
     prob = max(prob_pneumonia, prob_normal)
 
