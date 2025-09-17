@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing import image
 import tflite_runtime.interpreter as tflite
 
@@ -57,4 +56,12 @@ if uploaded_file is not None:
     prediction = predict_tflite(interpreter, img_array)[0]  # vetor de saída
 
     # Assumindo saída binária [Normal, Pneumonia]
-    prob_no_
+    prob_normal = prediction[0]
+    prob_pneumonia = prediction[1]
+    label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
+    prob = max(prob_pneumonia, prob_normal)
+
+    # Mostrar resultados
+    st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
+    st.markdown(f"**Classe prevista:** {label}")
+    st.markdown(f"**Probabilidade:** {prob:.2%}")
