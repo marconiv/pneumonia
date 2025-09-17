@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from tensorflow.keras.preprocessing import image
+from PIL import Image
 import tflite_runtime.interpreter as tflite
 
 # Caminho do modelo TFLite
@@ -13,11 +13,12 @@ def load_tflite_model():
     interpreter.allocate_tensors()
     return interpreter
 
-# Função para pré-processar imagem
+# Função para pré-processar imagem (sem TensorFlow)
 def preprocess_uploaded_image(uploaded_file):
-    img = image.load_img(uploaded_file, target_size=(180, 180), color_mode="grayscale")
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    img = Image.open(uploaded_file).convert("L")  # converte para grayscale
+    img = img.resize((180, 180))  # redimensiona
+    img_array = np.array(img, dtype=np.float32) / 255.0
+    img_array = np.expand_dims(img_array, axis=(0, -1))  # shape: (1, 180, 180, 1)
     return img_array, img
 
 # Função para fazer predição com TFLite
@@ -25,16 +26,16 @@ def predict_tflite(interpreter, img_array):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    # Converte a imagem para o dtype esperado pelo modelo
+    # Ajusta dtype
     img_array = img_array.astype(input_details[0]["dtype"])
 
-    # Passa os dados de entrada
+    # Passa os dados
     interpreter.set_tensor(input_details[0]['index'], img_array)
 
     # Roda a inferência
     interpreter.invoke()
 
-    # Obtém a saída
+    # Saída
     output_data = interpreter.get_tensor(output_details[0]['index'])
     return output_data
 
