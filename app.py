@@ -41,6 +41,11 @@ def predict_tflite(interpreter, img_array):
 
 # ==================== APP ====================
 st.set_page_config(page_title="Classificação de Raios-X", layout="centered")
+
+# Aviso de uso educacional
+st.warning("⚠️ Este projeto é de uso educacional e demonstrativo. "
+           "Não deve ser utilizado em ambiente clínico real sem validação regulamentada.")
+
 st.title("🩺 Classificação de Raios-X de Tórax (Normal vs Pneumonia)")
 
 # Carregar modelo
