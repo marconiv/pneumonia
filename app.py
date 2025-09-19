@@ -53,46 +53,9 @@ st.title("🩺 Classificação de Raios-X de Tórax (Normal vs Pneumonia)")
 # Carregar modelo
 interpreter = load_tflite_model()
 
-# URLs das imagens de amostra no GitHub
+# ==================== IMAGENS DO GITHUB ====================
+st.subheader("Escolha uma imagem de amostra (GitHub)")
+
+# URLs das imagens públicas no GitHub
 image_urls = [
-    f"https://raw.githubusercontent.com/marconiv/pneumonia/main/img{i}.jpeg"
-    for i in range(1, 11)
-]
-
-# Escolha de imagem de amostra
-st.subheader("Escolha uma imagem de amostra do GitHub")
-selected_url = st.selectbox("Selecione uma imagem de teste:", image_urls)
-
-if selected_url:
-    response = requests.get(selected_url)
-    img = Image.open(BytesIO(response.content))
-    img_array, img_display = preprocess_image(img)
-
-    # Faz a predição
-    prediction = predict_tflite(interpreter, img_array)[0]  # vetor de saída
-    prob_normal = float(prediction[0])
-    prob_pneumonia = float(prediction[1])
-    label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
-    prob = max(prob_pneumonia, prob_normal)
-
-    st.image(img_display, caption=f"Imagem de amostra ({label})", use_column_width=True)
-    st.markdown(f"**Classe prevista:** {label}")
-    st.markdown(f"**Probabilidade:** {prob:.2%}")
-
-# Upload manual continua disponível
-st.subheader("Ou envie sua própria imagem")
-uploaded_file = st.file_uploader("Envie uma imagem (JPG/PNG)", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    img = Image.open(uploaded_file)
-    img_array, img_display = preprocess_image(img)
-
-    prediction = predict_tflite(interpreter, img_array)[0]
-    prob_normal = float(prediction[0])
-    prob_pneumonia = float(prediction[1])
-    label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
-    prob = max(prob_pneumonia, prob_normal)
-
-    st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
-    st.markdown(f"**Classe prevista:** {label}")
-    st.markdown(f"**Probabilidade:** {prob:.2%}")
+    f"https://raw.githubuse
