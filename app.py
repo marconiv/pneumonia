@@ -4,6 +4,7 @@ from PIL import Image
 import tflite_runtime.interpreter as tflite
 import requests
 from io import BytesIO
+import time
 
 # Caminho do modelo TFLite
 TFLITE_PATH = "chest_xray_model.tflite"
@@ -43,6 +44,14 @@ def predict_tflite(interpreter, img_array):
 
 # ==================== APP ====================
 st.set_page_config(page_title="Classificação de Raios-X", layout="centered")
+
+# Mensagem inicial de loading
+with st.spinner("Carregando aplicação... Isso pode levar alguns segundos se a aplicação estava 'dormindo'."):
+    time.sleep(2)
+
+# Aviso fixo
+st.info("ℹ️ Se o carregamento demorar um pouco, é normal: "
+        "a aplicação pode estar 'dormindo' e está sendo reativada automaticamente pelo servidor do Streamlit.")
 
 # Aviso de uso educacional
 st.warning("⚠️ Este projeto é de uso educacional e demonstrativo. "
@@ -99,11 +108,4 @@ if uploaded_file is not None:
         prediction = predict_tflite(interpreter, img_array)[0]
         prob_normal = float(prediction[0])
         prob_pneumonia = float(prediction[1])
-        label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
-        prob = max(prob_pneumonia, prob_normal)
-
-        st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
-        st.markdown(f"**Classe prevista:** {label}")
-        st.markdown(f"**Probabilidade:** {prob:.2%}")
-    except Exception as e:
-        st.error(f"Erro ao processar a imagem enviada: {e}")
+        label = "Pneumonia" if prob_pneumonia > p_
