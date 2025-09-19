@@ -5,7 +5,7 @@ A aplicação foi desenvolvida em Streamlit e está disponível online para demo
 
 🚀 Demonstração Online
 
-👉 Acesse a aplicação no Streamlit Cloud
+👉 Acesse a aplicação no Streamlit Cloud : https://pneumonia-portfolio-marconi-vieira-infochoice.streamlit.app/
 
 📂 Estrutura do Projeto
 
