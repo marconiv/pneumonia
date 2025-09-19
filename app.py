@@ -62,7 +62,7 @@ st.title("🩺 Classificação de Raios-X de Tórax (Normal vs Pneumonia)")
 # Carregar modelo
 interpreter = load_tflite_model()
 
-# ==================== IMAGENS DO GITHUB ====================
+# ==================== IMAGENS DO GITHUB EM GRID ====================
 st.subheader("Escolha uma imagem de amostra (GitHub)")
 
 # URLs das imagens públicas no GitHub
@@ -71,48 +71,36 @@ image_urls = [
     for i in range(1, 11)
 ]
 
-selected_url = st.selectbox("Selecione uma imagem de teste:", image_urls)
+# Criar um grid de 5 colunas
+cols = st.columns(5)
+selected_url = None
 
-if selected_url:
+for idx, url in enumerate(image_urls):
+    col = cols[idx % 5]  # distribui em 5 colunas
     try:
-        response = requests.get(selected_url)
+        response = requests.get(url)
         if response.status_code == 200 and "image" in response.headers["Content-Type"]:
             img = Image.open(BytesIO(response.content))
-            img_array, img_display = preprocess_image(img)
+            # Regra: ímpar = Normal, par = Pneumonia
+            esperado = "Normal" if (idx + 1) % 2 != 0 else "Pneumonia"
+            # Exibe miniatura
+            col.image(img, use_column_width=True, caption=f"Img {idx+1} – Esperado: {esperado}")
+            if col.button(f"Selecionar {idx+1}"):
+                selected_url = url
+    except:
+        col.error("Erro")
 
-            # Faz a predição
-            prediction = predict_tflite(interpreter, img_array)[0]
-            prob_normal = float(prediction[0])
-            prob_pneumonia = float(prediction[1])
-            label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
-            prob = max(prob_pneumonia, prob_normal)
+# Se alguma imagem foi selecionada
+if selected_url:
+    response = requests.get(selected_url)
+    img = Image.open(BytesIO(response.content))
+    img_array, img_display = preprocess_image(img)
 
-            st.image(img_display, caption=f"Imagem de amostra ({label})", use_column_width=True)
-            st.markdown(f"**Classe prevista:** {label}")
-            st.markdown(f"**Probabilidade:** {prob:.2%}")
-        else:
-            st.error("Erro ao carregar a imagem da URL. Verifique se o link está correto.")
-    except Exception as e:
-        st.error(f"Erro ao processar a imagem: {e}")
+    # Faz a predição
+    prediction = predict_tflite(interpreter, img_array)[0]
+    prob_normal = float(prediction[0])
+    prob_pneumonia = float(prediction[1])
+    label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
+    prob = max(prob_pneumonia, prob_normal)
 
-# ==================== UPLOAD MANUAL ====================
-st.subheader("Ou envie sua própria imagem")
-
-uploaded_file = st.file_uploader("Envie uma imagem (JPG/PNG)", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    try:
-        img = Image.open(uploaded_file)
-        img_array, img_display = preprocess_image(img)
-
-        prediction = predict_tflite(interpreter, img_array)[0]
-        prob_normal = float(prediction[0])
-        prob_pneumonia = float(prediction[1])
-        label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
-        prob = max(prob_pneumonia, prob_normal)
-
-        st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
-        st.markdown(f"**Classe prevista:** {label}")
-        st.markdown(f"**Probabilidade:** {prob:.2%}")
-    except Exception as e:
-        st.error(f"Erro ao processar a imagem enviada: {e}")
+    st.image(img_display, caption=f"Imagem selecionada ({label})", use_
