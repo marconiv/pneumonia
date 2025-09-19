@@ -79,4 +79,4 @@ Não deve ser utilizado em ambiente clínico real sem validação regulamentada.
 👨‍💻 Autor
 
 Marconi Vieira
-📌 Portfólio: marconivieira.com.br
+📌 Portfólio: https://marconivieira.com.br | https://infochoice.com.br
