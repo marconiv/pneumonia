@@ -108,4 +108,11 @@ if uploaded_file is not None:
         prediction = predict_tflite(interpreter, img_array)[0]
         prob_normal = float(prediction[0])
         prob_pneumonia = float(prediction[1])
-        label = "Pneumonia" if prob_pneumonia > p_
+        label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
+        prob = max(prob_pneumonia, prob_normal)
+
+        st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
+        st.markdown(f"**Classe prevista:** {label}")
+        st.markdown(f"**Probabilidade:** {prob:.2%}")
+    except Exception as e:
+        st.error(f"Erro ao processar a imagem enviada: {e}")
