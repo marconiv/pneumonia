@@ -58,4 +58,52 @@ st.subheader("Escolha uma imagem de amostra (GitHub)")
 
 # URLs das imagens públicas no GitHub
 image_urls = [
-    f"https://raw.githubuse
+    f"https://raw.githubusercontent.com/marconiv/pneumonia/main/samples/{i}_imagem.jpeg"
+    for i in range(1, 11)
+]
+
+selected_url = st.selectbox("Selecione uma imagem de teste:", image_urls)
+
+if selected_url:
+    try:
+        response = requests.get(selected_url)
+        if response.status_code == 200 and "image" in response.headers["Content-Type"]:
+            img = Image.open(BytesIO(response.content))
+            img_array, img_display = preprocess_image(img)
+
+            # Faz a predição
+            prediction = predict_tflite(interpreter, img_array)[0]
+            prob_normal = float(prediction[0])
+            prob_pneumonia = float(prediction[1])
+            label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
+            prob = max(prob_pneumonia, prob_normal)
+
+            st.image(img_display, caption=f"Imagem de amostra ({label})", use_column_width=True)
+            st.markdown(f"**Classe prevista:** {label}")
+            st.markdown(f"**Probabilidade:** {prob:.2%}")
+        else:
+            st.error("Erro ao carregar a imagem da URL. Verifique se o link está correto.")
+    except Exception as e:
+        st.error(f"Erro ao processar a imagem: {e}")
+
+# ==================== UPLOAD MANUAL ====================
+st.subheader("Ou envie sua própria imagem")
+
+uploaded_file = st.file_uploader("Envie uma imagem (JPG/PNG)", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    try:
+        img = Image.open(uploaded_file)
+        img_array, img_display = preprocess_image(img)
+
+        prediction = predict_tflite(interpreter, img_array)[0]
+        prob_normal = float(prediction[0])
+        prob_pneumonia = float(prediction[1])
+        label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
+        prob = max(prob_pneumonia, prob_normal)
+
+        st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
+        st.markdown(f"**Classe prevista:** {label}")
+        st.markdown(f"**Probabilidade:** {prob:.2%}")
+    except Exception as e:
+        st.error(f"Erro ao processar a imagem enviada: {e}")
