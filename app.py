@@ -2,6 +2,8 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tflite_runtime.interpreter as tflite
+import requests
+from io import BytesIO
 
 # Caminho do modelo TFLite
 TFLITE_PATH = "chest_xray_model.tflite"
@@ -14,8 +16,8 @@ def load_tflite_model():
     return interpreter
 
 # Função para pré-processar imagem (em RGB, 3 canais)
-def preprocess_uploaded_image(uploaded_file):
-    img = Image.open(uploaded_file).convert("RGB")  # garante 3 canais
+def preprocess_image(img):
+    img = img.convert("RGB")  # garante 3 canais
     img = img.resize((180, 180))  # redimensiona para o input do modelo
     img_array = np.array(img, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)  # shape: (1, 180, 180, 3)
@@ -51,23 +53,46 @@ st.title("🩺 Classificação de Raios-X de Tórax (Normal vs Pneumonia)")
 # Carregar modelo
 interpreter = load_tflite_model()
 
-# Upload de imagem
-uploaded_file = st.file_uploader("Envie uma imagem (JPG/PNG)", type=["jpg", "jpeg", "png"])
+# URLs das imagens de amostra no GitHub
+image_urls = [
+    f"https://raw.githubusercontent.com/marconiv/pneumonia/main/img{i}.jpeg"
+    for i in range(1, 11)
+]
 
-if uploaded_file is not None:
-    # Pré-processa a imagem
-    img_array, img_display = preprocess_uploaded_image(uploaded_file)
+# Escolha de imagem de amostra
+st.subheader("Escolha uma imagem de amostra do GitHub")
+selected_url = st.selectbox("Selecione uma imagem de teste:", image_urls)
+
+if selected_url:
+    response = requests.get(selected_url)
+    img = Image.open(BytesIO(response.content))
+    img_array, img_display = preprocess_image(img)
 
     # Faz a predição
     prediction = predict_tflite(interpreter, img_array)[0]  # vetor de saída
-
-    # Assumindo saída binária [Normal, Pneumonia]
     prob_normal = float(prediction[0])
     prob_pneumonia = float(prediction[1])
     label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
     prob = max(prob_pneumonia, prob_normal)
 
-    # Mostrar resultados
+    st.image(img_display, caption=f"Imagem de amostra ({label})", use_column_width=True)
+    st.markdown(f"**Classe prevista:** {label}")
+    st.markdown(f"**Probabilidade:** {prob:.2%}")
+
+# Upload manual continua disponível
+st.subheader("Ou envie sua própria imagem")
+uploaded_file = st.file_uploader("Envie uma imagem (JPG/PNG)", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    img = Image.open(uploaded_file)
+    img_array, img_display = preprocess_image(img)
+
+    prediction = predict_tflite(interpreter, img_array)[0]
+    prob_normal = float(prediction[0])
+    prob_pneumonia = float(prediction[1])
+    label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
+    prob = max(prob_pneumonia, prob_normal)
+
     st.image(img_display, caption=f"Imagem enviada ({label})", use_column_width=True)
     st.markdown(f"**Classe prevista:** {label}")
     st.markdown(f"**Probabilidade:** {prob:.2%}")
