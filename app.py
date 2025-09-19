@@ -6,101 +6,80 @@ import requests
 from io import BytesIO
 import time
 
+# ==================== CONFIG ====================
+st.set_page_config(page_title="Classificação de Raios-X", layout="centered")
+
 # Caminho do modelo TFLite
 TFLITE_PATH = "chest_xray_model.tflite"
 
-# Função para carregar o modelo TFLite (cacheado para não recarregar a cada uso)
+# URLs das imagens públicas no GitHub
+IMAGE_URLS = [
+    f"https://raw.githubusercontent.com/marconiv/pneumonia/main/samples/{i}_imagem.jpeg"
+    for i in range(1, 11)
+]
+
+# ==================== HELPERS ====================
 @st.cache_resource
 def load_tflite_model():
     interpreter = tflite.Interpreter(model_path=TFLITE_PATH)
     interpreter.allocate_tensors()
     return interpreter
 
-# Função para pré-processar imagem (em RGB, 3 canais)
-def preprocess_image(img):
-    img = img.convert("RGB")  # garante 3 canais
-    img = img.resize((180, 180))  # redimensiona para o input do modelo
+def preprocess_image(img: Image.Image):
+    img = img.convert("RGB")
+    img = img.resize((180, 180))
     img_array = np.array(img, dtype=np.float32) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)  # shape: (1, 180, 180, 3)
+    img_array = np.expand_dims(img_array, axis=0)  # (1, 180, 180, 3)
     return img_array, img
 
-# Função para fazer predição com TFLite
-def predict_tflite(interpreter, img_array):
+def predict_tflite(interpreter, img_array: np.ndarray):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
-
-    # Ajusta dtype da entrada
     img_array = img_array.astype(input_details[0]["dtype"])
-
-    # Passa os dados
-    interpreter.set_tensor(input_details[0]['index'], img_array)
-
-    # Roda a inferência
+    interpreter.set_tensor(input_details[0]["index"], img_array)
     interpreter.invoke()
-
-    # Obtém a saída
-    output_data = interpreter.get_tensor(output_details[0]['index'])
+    output_data = interpreter.get_tensor(output_details[0]["index"])
     return output_data
 
-# ==================== APP ====================
-st.set_page_config(page_title="Classificação de Raios-X", layout="centered")
+@st.cache_data(ttl=3600)
+def fetch_image_from_url(url: str):
+    r = requests.get(url, timeout=10)
+    if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
+        return Image.open(BytesIO(r.content))
+    return None
 
-# Mensagem inicial de loading
+def expected_label_by_index(index_zero_based: int) -> str:
+    # regra: ímpar = Normal, par = Pneumonia (considerando 1..10)
+    one_based = index_zero_based + 1
+    return "Normal" if one_based % 2 != 0 else "Pneumonia"
+
+# ==================== UI TOP ====================
 with st.spinner("Carregando aplicação... Isso pode levar alguns segundos se a aplicação estava 'dormindo'."):
     time.sleep(2)
 
-# Aviso fixo
-st.info("ℹ️ Se o carregamento demorar um pouco, é normal: "
-        "a aplicação pode estar 'dormindo' e está sendo reativada automaticamente pelo servidor do Streamlit.")
+st.info(
+    "ℹ️ Se o carregamento demorar um pouco, é normal: a aplicação pode estar 'dormindo' e "
+    "está sendo reativada automaticamente pelo servidor do Streamlit."
+)
 
-# Aviso de uso educacional
-st.warning("⚠️ Este projeto é de uso educacional e demonstrativo. "
-           "Não deve ser utilizado em ambiente clínico real sem validação regulamentada.")
+st.warning(
+    "⚠️ Este projeto é de uso educacional e demonstrativo. "
+    "Não deve ser utilizado em ambiente clínico real sem validação regulamentada."
+)
 
 st.title("🩺 Classificação de Raios-X de Tórax (Normal vs Pneumonia)")
 
-# Carregar modelo
+# ==================== LOAD MODEL ====================
 interpreter = load_tflite_model()
 
-# ==================== IMAGENS DO GITHUB EM GRID ====================
+# ==================== GRID DE IMAGENS (GITHUB) ====================
 st.subheader("Escolha uma imagem de amostra (GitHub)")
 
-# URLs das imagens públicas no GitHub
-image_urls = [
-    f"https://raw.githubusercontent.com/marconiv/pneumonia/main/samples/{i}_imagem.jpeg"
-    for i in range(1, 11)
-]
+if "selected_url" not in st.session_state:
+    st.session_state.selected_url = None
 
-# Criar um grid de 5 colunas
 cols = st.columns(5)
-selected_url = None
-
-for idx, url in enumerate(image_urls):
-    col = cols[idx % 5]  # distribui em 5 colunas
+for idx, url in enumerate(IMAGE_URLS):
+    col = cols[idx % 5]
     try:
-        response = requests.get(url)
-        if response.status_code == 200 and "image" in response.headers["Content-Type"]:
-            img = Image.open(BytesIO(response.content))
-            # Regra: ímpar = Normal, par = Pneumonia
-            esperado = "Normal" if (idx + 1) % 2 != 0 else "Pneumonia"
-            # Exibe miniatura
-            col.image(img, use_column_width=True, caption=f"Img {idx+1} – Esperado: {esperado}")
-            if col.button(f"Selecionar {idx+1}"):
-                selected_url = url
-    except:
-        col.error("Erro")
-
-# Se alguma imagem foi selecionada
-if selected_url:
-    response = requests.get(selected_url)
-    img = Image.open(BytesIO(response.content))
-    img_array, img_display = preprocess_image(img)
-
-    # Faz a predição
-    prediction = predict_tflite(interpreter, img_array)[0]
-    prob_normal = float(prediction[0])
-    prob_pneumonia = float(prediction[1])
-    label = "Pneumonia" if prob_pneumonia > prob_normal else "Normal"
-    prob = max(prob_pneumonia, prob_normal)
-
-    st.image(img_display, caption=f"Imagem selecionada ({label})", use_
+        thumb = fetch_image_from_url(url)
