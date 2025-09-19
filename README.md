@@ -19,7 +19,7 @@ examples/ → Imagens de exemplo (opcional para teste rápido).
 
 ⚙️ Como Funciona
 
-O usuário envia uma imagem (JPG/PNG) de raio-X de tórax.
+O usuário escolhe uma imagem de raio-X de tórax.
 
 A imagem é pré-processada (grayscale, 180×180 px, normalização).
 
